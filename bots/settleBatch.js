@@ -1,3 +1,4 @@
+// bots/settleBatch.js
 require("dotenv").config();
 const { ethers } = require("ethers");
 
@@ -7,12 +8,13 @@ const { batcherAbi, dataProviderAbi } = require("../abi/abis");
 const CONFIG = {
   POLL_INTERVAL: 5000, // Poll every 5 seconds
   MAX_BATCH_SIZE: 10, // Max reports per batch
-  GAS_LIMIT_PER_REPORT: 750000, // Increased gas per report
-  MAX_GAS_LIMIT: 7500000, // Increased max gas limit
+  GAS_LIMIT_PER_REPORT: 750000, // Gas per report
+  MAX_GAS_LIMIT: 7500000, // Max total gas limit
   GAS_PRICE_MULTIPLIER: 1.2, // Adjust gas price for speed
   MIN_ETH_BALANCE: ethers.parseEther("0.05"), // Minimum ETH balance
   MAX_RETRIES: 3, // Max retries for gas estimation or tx submission
   RETRY_DELAY: 1000, // Delay between retries (ms)
+  FALLBACK_RPC_URL: "https://arb1.arbitrum.io/rpc", // Public Arbitrum RPC as fallback
 };
 
 // Initialize providers and wallet
@@ -32,11 +34,17 @@ const dataProviderContract = new ethers.Contract(
   wallet
 );
 
-// const oracleContract = new ethers.Contract(
-//   process.env.ORACLE_CONTRACT_ADDRESS,
-//   oracleAbi,
-//   queryProvider
-// );
+// Utility function to check provider health
+async function checkProviderHealth(provider, name) {
+  try {
+    const blockNumber = await provider.getBlockNumber();
+    console.log(`${name} provider is healthy (block: ${blockNumber})`);
+    return true;
+  } catch (error) {
+    console.error(`${name} provider failed: ${error.message}`);
+    return false;
+  }
+}
 
 // Utility function to get current block timestamp
 async function getCurrentBlockTimestamp() {
@@ -55,7 +63,7 @@ async function estimateGasForBatch(batch, retryCount = 0) {
     const gasEstimate = await batcherContract.safeSettleReports.estimateGas(
       batch
     );
-    return (gasEstimate * BigInt(110)) / BigInt(100); // Add 10% buffer
+    return (gasEstimate * BigInt(115)) / BigInt(100); // Add 15% buffer
   } catch (error) {
     console.error(
       `Gas estimation attempt ${retryCount + 1} failed: ${error.message}`
@@ -72,6 +80,12 @@ async function estimateGasForBatch(batch, retryCount = 0) {
 // Main function to fetch and settle reports
 async function settleReports() {
   try {
+    // Check provider health
+    if (!(await checkProviderHealth(queryProvider, "Query"))) {
+      console.error("Query provider unhealthy, skipping settlement");
+      return;
+    }
+
     console.log("Fetching report data...");
 
     // Fetch report data from openOracleDataProviderV2
@@ -132,9 +146,13 @@ async function settleReports() {
     }
 
     // Estimate gas price
-    const gasPrice = (await queryProvider.getFeeData()).gasPrice;
+    const gasPrice = (await queryProvider.getFeeData()).gasPrice * CONFIG.GAS_PRICE_MULTIPLIER;
 
     console.log(`Submitting batch of ${batch.length} settlements...`);
+
+    // Fetch current nonce
+    const nonce = await queryProvider.getTransactionCount(wallet.address, "pending");
+    console.log(`Using nonce: ${nonce}`);
 
     // Submit batch transaction using safeSettleReports with retries
     let txResponse;
@@ -146,10 +164,10 @@ async function settleReports() {
         );
         const txWithParams = {
           ...tx,
-          nonce,
           chainId: 42161, // Arbitrum One
           gasLimit: estimatedGas,
           gasPrice,
+          nonce,
         };
         const signedTx = await wallet.signTransaction(txWithParams);
         txResponse = await txProvider.send("eth_sendRawTransaction", [
@@ -158,14 +176,15 @@ async function settleReports() {
         console.log(`Transaction sent: ${txResponse}`);
         break;
       } catch (error) {
-        console.error(
-          `Transaction attempt ${attempt} failed: ${error.message}`
-        );
-        if (attempt === CONFIG.MAX_RETRIES) {
+        console.error(`Transaction attempt ${attempt} failed: ${error.message}`);
+        if (error.code === "NONCE_EXPIRED" || error.message.includes("nonce too low")) {
+          console.log("Incrementing nonce and retrying...");
+          txWithParams.nonce = (await queryProvider.getTransactionCount(wallet.address, "pending")) + attempt - 1;
+        } else if (attempt === CONFIG.MAX_RETRIES) {
           console.error("Max retries reached, skipping transaction");
           return;
         }
-        await new Promise((resolve) => setTimeout(resolve, CONFIG.RETRY_DELAY));
+        await new Promise(resolve => setTimeout(resolve, CONFIG.RETRY_DELAY));
       }
     }
 
@@ -176,12 +195,13 @@ async function settleReports() {
 
     // Log successful settlements (assuming Settled event exists in IOpenOracle)
     if (receipt.events) {
-      receipt.events.forEach((event) => {
+      receipt.events.forEach(event => {
         if (event.event === "Settled") {
           console.log(`Report ${event.args.reportId} settled successfully.`);
         }
       });
     }
+
   } catch (error) {
     console.error("Error in settleReports:", error.message);
     if (error.reason) console.error("Reason:", error.reason);
