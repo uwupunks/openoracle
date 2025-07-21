@@ -9,7 +9,7 @@
     "settleBatch": "node bots/settleBatch.js",
     "report": "node bots/initial-report.js",
     "dispute": "node bots/dispute.js",
-    "start:all": "npm run swap & npm run settle & npm run report & npm run dispute",
+    "start:all": "npm run swap & npm run settleBatch & npm run report & npm run dispute",
     "stop:all": "pkill -f 'node bots/'"
   },
   "keywords": [],
