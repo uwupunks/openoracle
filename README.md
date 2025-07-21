@@ -2,7 +2,7 @@
 
 An OpenOracle Node client with automated bots for price reporting, settling, and dispute resolution.
 
-# Warning: Alpha software! Test with small amounts only
+## *Warning:* Alpha software! Test with small amounts only
 
 ## Features
 
