@@ -71,6 +71,14 @@ npm run stop:all
 - Oracle: `0x083bc19d1251ec66B8153ebD9F1C437727e5352E`
 - Swap: `0xf2D9d22d2EaA282e8103b4Cd7344676ef04A9886`
 
+## Run as Service
+
+sudo cp scripts/open-oracle.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl start open-oracle
+sudo systemctl enable open-oracle
+
+
 ## Security
 
 - Never commit your `.env` file

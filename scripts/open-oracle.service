@@ -1,0 +1,15 @@
+[Unit]
+Description=Open Oracle Node.js Application
+After=network.target
+
+[Service]
+WorkingDirectory=/home/ubuntu/openoracle
+ExecStart=/usr/bin/npm run start:all
+Restart=always
+RestartSec=5
+User=ubuntu
+Environment=PATH=/usr/bin:/usr/local/bin
+Environment=NODE_ENV=production
+
+[Install]
+WantedBy=multi-user.target
