@@ -16,6 +16,7 @@ const CONFIG = {
   RETRY_DELAY: 1000, // Delay between retries (ms)
   FALLBACK_RPC_URL: "https://arb1.arbitrum.io/rpc", // Public Arbitrum RPC as fallback
 };
+let lastProcessedReportId = 1217; // Starting report ID
 
 // Initialize providers and wallet
 const txProvider = new ethers.JsonRpcProvider(process.env.SEQUENCER_RPC_URL);
@@ -86,10 +87,10 @@ async function settleReports() {
       return;
     }
 
-    console.log("Fetching report data...");
+    console.log(`Fetching report data... IDs ${lastProcessedReportId} to ${lastProcessedReportId + 100}`);
 
     // Fetch report data from openOracleDataProviderV2
-    const reports = await dataProviderContract.getData();
+    const reports = await dataProviderContract.getData(lastProcessedReportId, lastProcessedReportId+100);
     const currentTimestamp = await getCurrentBlockTimestamp();
 
     // Filter reports that are ready to settle
@@ -101,10 +102,13 @@ async function settleReports() {
         settlementTimestamp,
         stateHash,
         initialReportTimestamp,
+        reportId,
       } = report;
       if (isDistributed || !stateHash || initialReportTimestamp <= 0) {
         return false; // Skip distributed or invalid reports
       }
+      lastProcessedReportId = reportId; // Update last processed report ID
+      console.log(`Processing report ID ${reportId}`);
 
       if (timeType) {
         // Time-based settlement (seconds)
