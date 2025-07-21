@@ -6,6 +6,7 @@
   "scripts": {
     "swap": "node bots/swap.js",
     "settle": "node bots/settle.js",
+    "settleBatch": "node bots/settleBatch.js",
     "report": "node bots/initial-report.js",
     "dispute": "node bots/dispute.js",
     "start:all": "npm run swap & npm run settle & npm run report & npm run dispute",

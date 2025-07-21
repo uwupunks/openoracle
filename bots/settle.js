@@ -81,15 +81,7 @@ async function runSettleBot() {
         return;
       }
 
-      // Estimate L1 gas fees
-      let l1GasFees = BigInt(0);
-      try {
-        l1GasFees = await arbGasInfoContract.getCurrentTxL1GasFees();
-      } catch (error) {
-        console.log("Failed to fetch L1 gas fees, assuming 0:", error.message);
-      }
-
-      const totalGasCost = gasEstimate * gasPrice + l1GasFees;
+      const totalGasCost = gasEstimate * gasPrice;
       const threshold = (totalGasCost * BigInt(105)) / BigInt(100); // 105% of gas cost
 
       // Check potential rewards by scanning last 8 reports
@@ -169,7 +161,7 @@ async function runSettleBot() {
         signedTx,
       ]);
       console.log("Settlement transaction hash:", txResponse);
-      await txProvider.waitForTransaction(txResponse);
+      await queryProvider.waitForTransaction(txResponse);
       console.log(
         "Settlement confirmed. Check Arbiscan: https://arbiscan.io/tx/" +
           txResponse
