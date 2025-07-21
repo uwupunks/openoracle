@@ -163,9 +163,9 @@ async function runSwapBot() {
       // Swap parameters
       const fee = 2222; // 2.222 bps
       const settlementTime = 10; // 10 seconds
-      const msgValue = ethers.parseEther("0.000004"); // ~0.000004 ETH
+      const msgValue = ethers.parseEther("0.0000004"); // ~0.000004 ETH
 
-      const amount1Weth = ethers.parseEther("0.00001");
+      const amount1Weth = ethers.parseEther("0.000001");
       const amount1Usdc = ethers.parseUnits("0.04", 6); // 0.04 USDC
 
       // Calculate amount2Usdc with fee adjustment
