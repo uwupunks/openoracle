@@ -150,7 +150,7 @@ async function settleReports() {
     }
 
     // Estimate gas price
-    const gasPrice = (await queryProvider.getFeeData()).gasPrice * CONFIG.GAS_PRICE_MULTIPLIER;
+    const gasPrice = (await queryProvider.getFeeData()).gasPrice.mul(CONFIG.GAS_PRICE_MULTIPLIER);
 
     console.log(`Submitting batch of ${batch.length} settlements...`);
 
