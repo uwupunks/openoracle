@@ -151,8 +151,8 @@ async function settleReports() {
 
     // Estimate gas price
     //multiply bigint times CONFIG.GAS_PRICE_MULTIPLIER
-    const gasPrice = (await queryProvider.getFeeData()).gasPrice * BigInt(CONFIG.GAS_PRICE_MULTIPLIER)
-
+    const gasPriceOrig = (await queryProvider.getFeeData()).gasPrice
+    const gasPrice = gasPriceOrig + (gasPriceOrig * 20n / 100n); // Increase gas price by 20% for speed
     console.log(`Submitting batch of ${batch.length} settlements...`);
 
     // Fetch current nonce
